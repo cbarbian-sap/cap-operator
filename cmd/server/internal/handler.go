@@ -530,15 +530,20 @@ func (s *SubscriptionHandler) handleAsyncCallback(ctx context.Context, saasData 
 			return falseVal
 		}
 
-		payload, _ := json.Marshal(&CallbackResponse{
+		payload, err := json.Marshal(&CallbackResponse{
 			Status:           checkMatch(status, CallbackSucceeded, CallbackFailed),
 			Message:          checkMatch(status, checkMatch(isProvisioning, ProvisioningSucceededMessage, DeprovisioningSucceededMessage), checkMatch(isProvisioning, ProvisioningFailedMessage, DeprovisioningFailedMessage)),
 			SubscriptionUrl:  appUrl,
 			AdditionalOutput: &CallbackAdditionalOutput{Foo: "bar"},
 		})
+		if err != nil {
+			klog.Error("Error marshalling async callback payload: ", err.Error())
+			return
+		}
 		callbackReq, _ := http.NewRequestWithContext(ctx, http.MethodPut, saasData.SaasManagerUrl+asyncCallbackPath, bytes.NewBuffer(payload))
 		callbackReq.Header.Set("Content-Type", "application/json")
 		callbackReq.Header.Set("Authorization", BearerPrefix+oAuthType.AccessToken)
+		klog.Infof("Callback request payload: %s", string(payload))
 
 		client := s.httpClientGenerator.NewHTTPClient()
 		klog.V(2).Info("Triggering callback: ", callbackReq)
