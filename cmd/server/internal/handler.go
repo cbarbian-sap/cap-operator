@@ -126,9 +126,14 @@ type GetRequest struct {
 }
 
 type CallbackResponse struct {
-	Status          string `json:"status"`
-	Message         string `json:"message"`
-	SubscriptionUrl string `json:"subscriptionUrl"`
+	Status           string                    `json:"status"`
+	Message          string                    `json:"message"`
+	SubscriptionUrl  string                    `json:"subscriptionUrl"`
+	AdditionalOutput *CallbackAdditionalOutput `json:"additionalOutput,omitempty"`
+}
+
+type CallbackAdditionalOutput struct {
+	Foo string `json:"foo,omitempty"`
 }
 
 type OAuthResponse struct {
@@ -526,9 +531,10 @@ func (s *SubscriptionHandler) handleAsyncCallback(ctx context.Context, saasData 
 		}
 
 		payload, _ := json.Marshal(&CallbackResponse{
-			Status:          checkMatch(status, CallbackSucceeded, CallbackFailed),
-			Message:         checkMatch(status, checkMatch(isProvisioning, ProvisioningSucceededMessage, DeprovisioningSucceededMessage), checkMatch(isProvisioning, ProvisioningFailedMessage, DeprovisioningFailedMessage)),
-			SubscriptionUrl: appUrl,
+			Status:           checkMatch(status, CallbackSucceeded, CallbackFailed),
+			Message:          checkMatch(status, checkMatch(isProvisioning, ProvisioningSucceededMessage, DeprovisioningSucceededMessage), checkMatch(isProvisioning, ProvisioningFailedMessage, DeprovisioningFailedMessage)),
+			SubscriptionUrl:  appUrl,
+			AdditionalOutput: &CallbackAdditionalOutput{Foo: "bar"},
 		})
 		callbackReq, _ := http.NewRequestWithContext(ctx, http.MethodPut, saasData.SaasManagerUrl+asyncCallbackPath, bytes.NewBuffer(payload))
 		callbackReq.Header.Set("Content-Type", "application/json")
